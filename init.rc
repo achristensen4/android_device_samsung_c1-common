@@ -24,7 +24,7 @@ loglevel 3
     export BOOTCLASSPATH /system/framework/core.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/core-junit.jar
 
 # Disable CFQ slice idle delay
-    write /sys/block/mmcblk0/queue/iosched/slice_idle 0
+    write /sys/block/mmcblk0/queue/iosched/slice_idle 1
 
 # Backward compatibility
     symlink /system/etc /etc
@@ -115,7 +115,7 @@ loglevel 3
 on fs
 # mount mtd partitions
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
-    mount ext4 /dev/block/mmcblk0p9 /system wait ro
+    mount ext4 /dev/block/mmcblk0p9 /system wait rw
     mount ext4 /dev/block/mmcblk0p7 /cache nosuid nodev noatime wait
     exec check_filesystem /dev/block/mmcblk0p10 ext4
     mount ext4 /dev/block/mmcblk0p10 /data nosuid nodev noatime wait crypt discard,noauto_da_alloc
@@ -136,22 +136,22 @@ on post-fs
     exec apply_system_policy /dev/block/mmcblk0p11 vfat
     
     # once everything is setup, no need to modify /
-    # mount rootfs rootfs / ro remount
+    # mount rootfs rootfs / rw remount
 
     # We chown/chmod /data again so because mount is run as root + defaults
     chown system system /data
     chmod 0771 /data
 
     # readahead files which are used in "preloadClasses"
-    start sreadaheadd
+    stop sreadaheadd
 
     # to eliminate delay of "wait_for_coldboot_done", move these 2 lines here
     insmod /lib/modules/j4fs.ko
     mount j4fs /dev/block/mmcblk0p4 /mnt/.lfs
 
     # Mount compressed filesystems
-    mount squashfs loop@/system/lib/modules/modules.sqf /system/lib/modules ro
-    mount squashfs loop@/system/xbin/xbin.sqf /system/xbin ro
+    mount squashfs loop@/system/lib/modules/modules.sqf /system/lib/modules rw
+    mount squashfs loop@/system/xbin/xbin.sqf /system/xbin rw
 
     # Create dump dir and collect dumps.
     # Do this before we mount cache so eventually we can use cache for
@@ -589,7 +589,6 @@ service ueventd /sbin/ueventd
 
 service console /system/bin/sh
     console
-    disabled
     user shell
     group log
 
@@ -598,7 +597,6 @@ on property:ro.secure=0
 
 # adbd is controlled by the persist.service.adb.enable system property
 service adbd /sbin/adbd
-    disabled
 
 # adbd on at boot in emulator
 on property:ro.kernel.qemu=1
@@ -618,7 +616,6 @@ service servicemanager /system/bin/servicemanager
 
 service vold /system/bin/vold
     socket vold stream 0660 root mount
-    ioprio be 2
 
 service netd /system/bin/netd
     socket netd stream 0660 root system
@@ -642,12 +639,10 @@ service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-sys
 service media /system/bin/mediaserver
     user media
     group system audio camera graphics inet net_bt net_bt_admin net_raw radio
-    ioprio rt 4
 
 service bootanim /system/bin/bootanimation
     user graphics
     group graphics
-    disabled
     oneshot
 
 # wi-fi
@@ -661,7 +656,6 @@ service iprenew_eth0 /system/bin/dhcpcd -n
 
 service wpa_supplicant /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/misc/wifi/wpa_supplicant.conf
     socket wpa_eth0 dgram 0660 wifi wifi
-    disabled
     oneshot
 
 service dbus /system/bin/dbus-daemon --system --nofork
@@ -673,7 +667,6 @@ service dbus /system/bin/dbus-daemon --system --nofork
 service hciattach /system/bin/logwrapper /system/bin/brcm_patchram_plus -d --enable_lpm --enable_hci --baudrate 3000000 --patchram /system/bin/BCM4330B1_002.001.003.0221.0265.hcd /dev/s3c2410_serial0
     user bluetooth
     group bluetooth net_bt_admin
-    disabled
     oneshot
 
 service bluetoothd /system/bin/bluetoothd -n
@@ -682,12 +675,10 @@ service bluetoothd /system/bin/bluetoothd -n
     # init.rc does not yet support applying capabilities, so run as root and
     # let bluetoothd drop uid to bluetooth with the right linux capabilities
     group bluetooth net_bt_admin misc
-    disabled
 
 # bluetooth mac address
 service bdaddr /system/bin/bdaddr_read
     user root
-    disabled
     oneshot
 
 on property:init.svc.bootanim=running
@@ -696,25 +687,21 @@ on property:init.svc.bootanim=running
 service hfag /system/bin/sdptool add --channel=10 HFAG
     user bluetooth
     group bluetooth net_bt_admin
-    disabled
     oneshot
 
 service hsag /system/bin/sdptool add --channel=11 HSAG
     user bluetooth
     group bluetooth net_bt_admin
-    disabled
     oneshot
 
 service opush /system/bin/sdptool add --channel=12 OPUSH
     user bluetooth
     group bluetooth net_bt_admin
-    disabled
     oneshot
 
 service pbap /system/bin/sdptool add --channel=19 PBAP
     user bluetooth
     group bluetooth net_bt_admin
-    disabled
     oneshot
 
 service installd /system/bin/installd
@@ -724,14 +711,12 @@ service racoon /system/bin/racoon
     socket racoon stream 600 system system
     # racoon will setuid to vpn after getting necessary resources.
     group net_admin
-    disabled
     oneshot
 
 service mtpd /system/bin/mtpd
     socket mtpd stream 600 system system
     user vpn
     group vpn net_admin net_raw
-    disabled
     oneshot
 
 service keystore /system/bin/keystore /data/misc/keystore
@@ -741,7 +726,6 @@ service keystore /system/bin/keystore /data/misc/keystore
 
 service dumpstate /system/bin/dumpstate -s
     socket dumpstate stream 0660 shell log
-    disabled
     oneshot
 
 service tvout /system/bin/tvoutserver
